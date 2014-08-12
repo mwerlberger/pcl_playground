@@ -27,8 +27,8 @@ bool vectorSortFcn(int i, int j) { return (i<j); }
 
 //--------------------------------------------------------------------------------
 bool fitPlane(pcl::PointCloud<PointT>::Ptr cloud,
-              pcl::PointCloud<PointT>::Ptr plane,
-              pcl::PointCloud<PointT>::Ptr objects)
+              pcl::PointCloud<PointT>::Ptr& plane,
+              pcl::PointCloud<PointT>::Ptr& objects)
 {
    std::cout << "entering fitPlane(cloud)" << std::endl;
    plane.reset(new pcl::PointCloud<PointT>());
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
 
    if (!planefitSucces)
    {
-      PLC_ERROR("planefit: something went wrong...");
+      PCL_ERROR("planefit: something went wrong...");
       return EXIT_FAILURE;
    }
 

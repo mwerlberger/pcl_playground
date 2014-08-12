@@ -1,5 +1,6 @@
 # build directory
 build
+CMakeLists.txt.*
 
 # Compiled Object files
 *.slo

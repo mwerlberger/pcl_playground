@@ -2,7 +2,7 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/ply_io.h>
-#include <pcl/surface/mls.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 
 
 typedef pcl::PointXYZRGB PointT;
@@ -21,24 +21,18 @@ bool checkFilename(std::string fname)
 }
 
 //--------------------------------------------------------------------------------
-pcl::PointCloud<PointT>::Ptr runMLS(pcl::PointCloud<PointT>::Ptr cloud)
+pcl::PointCloud<PointT>::Ptr filterSOR(pcl::PointCloud<PointT>::Ptr cloud)
 {
-   std::cout << "entering runMLS(cloud)" << std::endl;
+   std::cout << "entering filterSOR(cloud)" << std::endl;
+   pcl::PointCloud<PointT>::Ptr cloud_sor(new pcl::PointCloud<PointT>());
 
-   pcl::MovingLeastSquares<PointT, PointT> mls;
-   mls.setInputCloud(cloud);
-   mls.setSearchRadius(0.05);
-   mls.setPolynomialFit(true);
-   mls.setPolynomialOrder(2);
-   mls.setUpsamplingMethod(pcl::MovingLeastSquares<PointT, PointT>::VOXEL_GRID_DILATION);
-//   mls.setUpsamplingRadius(0.005);
-//   mls.setUpsamplingStepSize(0.003);
-   //mls.setPointDensity(10);
-   mls.setDilationVoxelSize(0.0025);
+   pcl::StatisticalOutlierRemoval<PointT> sor;
+   sor.setInputCloud(cloud);
+   sor.setMeanK(50);
+   sor.setStddevMulThresh(1.0);
+   sor.filter(*cloud_sor);
 
-   pcl::PointCloud<PointT>::Ptr cloud_mls(new pcl::PointCloud<PointT>());
-   mls.process(*cloud_mls);
-   return cloud_mls;
+   return cloud_sor;
 }
 
 //--------------------------------------------------------------------------------
@@ -61,16 +55,16 @@ int main(int argc, char** argv)
    pcl::PointCloud<PointT>::Ptr cloud_in(new pcl::PointCloud<PointT>);
    pcl::io::loadPLYFile(fname, *cloud_in);
 
-   // moving least squares
-   pcl::PointCloud<PointT>::Ptr cloud_mls = runMLS(cloud_in);
+   // statistical outlier removal
+   pcl::PointCloud<PointT>::Ptr cloud_sor = filterSOR(cloud_in);
    // save output
-   if (!cloud_mls->empty())
+   if (!cloud_sor->empty())
    {
-      pcl::io::savePLYFileBinary("cloud_xyzrgb_mls.ply", *cloud_mls);
+      pcl::io::savePLYFileBinary("cloud_xyzrgb_sor.ply", *cloud_sor);
    }
    else
    {
-      PCL_ERROR("MLS result pointcloud is empty.");
+      PCL_ERROR("SOR filtered pointcloud is empty.");
       return EXIT_FAILURE;
    }
 

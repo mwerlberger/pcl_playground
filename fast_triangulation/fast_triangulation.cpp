@@ -50,8 +50,8 @@ pcl::PolygonMesh::Ptr fastTriangulation(pcl::PointCloud<PointT>::Ptr cloud)
    // gp triangulation
    pcl::GreedyProjectionTriangulation<PointNormalT> gp3;
    pcl::PolygonMesh::Ptr triangles(new pcl::PolygonMesh());
-   gp3.setSearchRadius(0.025);
-   gp3.setMu(2.5);
+   gp3.setSearchRadius(0.1);
+   gp3.setMu(3);
    gp3.setMaximumNearestNeighbors(100);
    gp3.setMaximumSurfaceAngle(M_PI/4); // 45 degrees
    gp3.setMinimumAngle(M_PI/18); // 10 degrees

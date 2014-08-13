@@ -15,4 +15,5 @@ add_subdirectory(mls)
 add_subdirectory(planefit)
 add_subdirectory(fast_triangulation)
 add_subdirectory(poisson_surface)
+add_subdirectory(marching_cubes)
 

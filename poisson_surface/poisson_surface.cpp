@@ -5,7 +5,8 @@
 #include <pcl/io/vtk_io.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/features/normal_3d.h>
-#include <pcl/surface/gp3.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/surface/poisson.h>
 
 typedef pcl::PointXYZRGB PointT;
 typedef pcl::Normal NormalT;
@@ -26,13 +27,16 @@ bool checkFilename(std::string fname)
 }
 
 //--------------------------------------------------------------------------------
-pcl::PolygonMesh::Ptr fastTriangulation(pcl::PointCloud<PointT>::Ptr cloud)
+pcl::PolygonMesh::Ptr poissonReconstruction(pcl::PointCloud<PointT>::Ptr cloud)
 {
    std::cout << "entering fastTriangulation(cloud)" << std::endl;
 
    // point normals
    std::cout << "-- estimate point normals" << std::endl;
-   pcl::NormalEstimation<PointT, NormalT> n;
+   pcl::NormalEstimationOMP<pcl::PointXYZRGB, pcl::Normal> n;
+   n.setNumberOfThreads(8);
+
+//   pcl::NormalEstimation<PointT, NormalT> n;
    pcl::PointCloud<NormalT>::Ptr normals(new pcl::PointCloud<NormalT>);
    pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
    tree->setInputCloud(cloud);
@@ -44,27 +48,14 @@ pcl::PolygonMesh::Ptr fastTriangulation(pcl::PointCloud<PointT>::Ptr cloud)
    // points + normals in kdtree
    pcl::PointCloud<PointNormalT>::Ptr cloud_with_normals(new pcl::PointCloud<PointNormalT>);
    pcl::concatenateFields(*cloud, *normals, *cloud_with_normals);
-   pcl::search::KdTree<PointNormalT>::Ptr tree2(new pcl::search::KdTree<PointNormalT>);
-   tree2->setInputCloud(cloud_with_normals);
 
-   // gp triangulation
-   pcl::GreedyProjectionTriangulation<PointNormalT> gp3;
+   // poisson surface fit
    pcl::PolygonMesh::Ptr triangles(new pcl::PolygonMesh());
-   gp3.setSearchRadius(0.1);
-   gp3.setMu(3);
-   gp3.setMaximumNearestNeighbors(100);
-   gp3.setMaximumSurfaceAngle(M_PI/4); // 45 degrees
-   gp3.setMinimumAngle(M_PI/18); // 10 degrees
-   gp3.setMaximumAngle(2*M_PI/3); // 120 degrees
-   gp3.setNormalConsistency(false);
 
-   gp3.setInputCloud(cloud_with_normals);
-   gp3.setSearchMethod(tree2);
-   gp3.reconstruct(*triangles);
-
-////   // Additional vertex information
-////   std::vector<int> parts = gp3.getPartIDs();
-////   std::vector<int> states = gp3.getPointStates();
+   pcl::Poisson<PointNormalT> poisson;
+   poisson.setDepth(7);
+   poisson.setInputCloud(cloud_with_normals);
+   poisson.reconstruct(*triangles);
 
    return triangles;
 }
@@ -89,7 +80,7 @@ int main(int argc, char** argv)
    pcl::PointCloud<PointT>::Ptr cloud_in(new pcl::PointCloud<PointT>);
    pcl::io::loadPLYFile(fname, *cloud_in);
 
-   pcl::PolygonMesh::Ptr triangles = fastTriangulation(cloud_in);
+   pcl::PolygonMesh::Ptr triangles = poissonReconstruction(cloud_in);
 
    // sanity checks
    if (!triangles ||triangles->polygons.empty())
@@ -97,7 +88,8 @@ int main(int argc, char** argv)
       PCL_ERROR("Received an empty mesh....");
       return EXIT_FAILURE;
    }
-   pcl::io::saveVTKFile("mesh_gp3.vtk", *triangles);
+   pcl::io::saveVTKFile("mesh_poisson.vtk", *triangles);
+   pcl::io::savePLYFileBinary("mesh_poisson.ply", *triangles);
 
 
    return EXIT_SUCCESS;

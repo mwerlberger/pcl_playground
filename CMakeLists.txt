@@ -13,4 +13,5 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(sor)
 add_subdirectory(mls)
 add_subdirectory(planefit)
+add_subdirectory(fast_triangulation)
 

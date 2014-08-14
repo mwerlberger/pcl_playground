@@ -7,7 +7,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 
 
-typedef pcl::PointXYZRGB PointT;
+typedef pcl::PointXYZRGBNormal PointNormalT;
 
 //--------------------------------------------------------------------------------
 // check if filename is a .ply file
@@ -26,18 +26,18 @@ bool vectorSortFcn(int i, int j) { return (i<j); }
 
 
 //--------------------------------------------------------------------------------
-bool fitPlane(pcl::PointCloud<PointT>::Ptr cloud,
-              pcl::PointCloud<PointT>::Ptr& plane,
-              pcl::PointCloud<PointT>::Ptr& objects)
+bool fitPlane(pcl::PointCloud<PointNormalT>::Ptr cloud,
+              pcl::PointCloud<PointNormalT>::Ptr& plane,
+              pcl::PointCloud<PointNormalT>::Ptr& objects)
 {
    std::cout << "entering fitPlane(cloud)" << std::endl;
-   plane.reset(new pcl::PointCloud<PointT>());
-   objects.reset(new pcl::PointCloud<PointT>());
+   plane.reset(new pcl::PointCloud<PointNormalT>());
+   objects.reset(new pcl::PointCloud<PointNormalT>());
 
    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
    // Create the segmentation object
-   pcl::SACSegmentation<PointT> seg;
+   pcl::SACSegmentation<PointNormalT> seg;
    // Optional
    seg.setOptimizeCoefficients(true);
    // Mandatory
@@ -105,12 +105,12 @@ int main(int argc, char** argv)
       return EXIT_FAILURE;
    }
    std::cout << "loading " << fname << std::endl;
-   pcl::PointCloud<PointT>::Ptr cloud_in(new pcl::PointCloud<PointT>);
+   pcl::PointCloud<PointNormalT>::Ptr cloud_in(new pcl::PointCloud<PointNormalT>);
    pcl::io::loadPLYFile(fname, *cloud_in);
 
    // statistical outlier removal
-   pcl::PointCloud<PointT>::Ptr plane;
-   pcl::PointCloud<PointT>::Ptr objects;
+   pcl::PointCloud<PointNormalT>::Ptr plane;
+   pcl::PointCloud<PointNormalT>::Ptr objects;
    bool planefitSucces = fitPlane(cloud_in, plane, objects);
 
    if (!planefitSucces)
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
    // save output
    if (!plane ->empty())
    {
-      pcl::io::savePLYFileBinary("cloud_xyzrgb_planefit_plane.ply", *plane );
+      pcl::io::savePLYFileBinary("cloud_planefit_plane.ply", *plane );
    }
    else
    {
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
    // save output
    if (!objects ->empty())
    {
-      pcl::io::savePLYFileBinary("cloud_xyzrgb_planefit_objects.ply", *objects );
+      pcl::io::savePLYFileBinary("cloud_planefit_objects.ply", *objects );
    }
    else
    {

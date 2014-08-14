@@ -6,7 +6,8 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
-#include <pcl/surface/poisson.h>
+#include <pcl/surface/marching_cubes_hoppe.h>
+#include <pcl/visualization/cloud_viewer.h>
 
 typedef pcl::PointXYZRGB PointT;
 typedef pcl::Normal NormalT;
@@ -27,22 +28,6 @@ bool checkFilename(std::string fname)
 }
 
 //--------------------------------------------------------------------------------
-pcl::PolygonMesh::Ptr poissonReconstruction(pcl::PointCloud<PointNormalT>::Ptr cloud)
-{
-   std::cout << "entering poissonReconstruction(cloud)" << std::endl;
-
-   // poisson surface fit
-   pcl::PolygonMesh::Ptr triangles(new pcl::PolygonMesh());
-
-   pcl::Poisson<PointNormalT> poisson;
-   poisson.setDepth(7);
-   poisson.setInputCloud(cloud);
-   poisson.reconstruct(*triangles);
-
-   return triangles;
-}
-
-//--------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
    if(argc < 2)
@@ -60,19 +45,29 @@ int main(int argc, char** argv)
    }
    std::cout << "loading " << fname << std::endl;
    pcl::PointCloud<PointNormalT>::Ptr cloud_in(new pcl::PointCloud<PointNormalT>);
-   pcl::io::loadPLYFile(fname, *cloud_in);
+   pcl::io::loadPLYFile<PointNormalT>(fname, *cloud_in);
 
-   pcl::PolygonMesh::Ptr triangles = poissonReconstruction(cloud_in);
+   // split rgb and normals
+   pcl::PointCloud<PointT>::Ptr cloud_rgb(new pcl::PointCloud<PointT>);
+   pcl::PointCloud<NormalT>::Ptr cloud_normals(new pcl::PointCloud<NormalT>);
+   pcl::copyPointCloud(*cloud_in, *cloud_rgb);
+   pcl::copyPointCloud(*cloud_in, *cloud_normals);
 
-   // sanity checks
-   if (!triangles ||triangles->polygons.empty())
+
+   // display pointcloud + normals
+   pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+   viewer.setBackgroundColor (0.0, 0.0, 0.5);
+   pcl::visualization::PointCloudColorHandlerRGBField<PointT> rgb(cloud_rgb);
+   viewer.addPointCloud<PointT> (cloud_rgb, rgb, "sample cloud");
+   viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
+   viewer.addPointCloudNormals<PointT, NormalT> (cloud_rgb, cloud_normals, 10, 0.05, "normals");
+   viewer.addCoordinateSystem (0.3);
+   viewer.initCameraParameters();
+
+   while (!viewer.wasStopped ())
    {
-      PCL_ERROR("Received an empty mesh....");
-      return EXIT_FAILURE;
+     viewer.spinOnce ();
    }
-   pcl::io::saveVTKFile("mesh_poisson.vtk", *triangles);
-   pcl::io::savePLYFileBinary("mesh_poisson.ply", *triangles);
-
 
    return EXIT_SUCCESS;
 }

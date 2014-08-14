@@ -28,58 +28,21 @@ bool checkFilename(std::string fname)
 }
 
 //--------------------------------------------------------------------------------
-pcl::PolygonMesh::Ptr marchingcubesReconstruction(pcl::PointCloud<PointT>::Ptr cloud)
+pcl::PolygonMesh::Ptr marchingcubesReconstruction(pcl::PointCloud<PointNormalT>::Ptr cloud)
 {
    std::cout << "entering marchingcubesReconstruction(cloud)" << std::endl;
 
-   // point normals
-   std::cout << "-- estimate point normals" << std::endl;
-   pcl::NormalEstimationOMP<PointT, NormalT> n;
-   n.setNumberOfThreads(8);
-
-//   pcl::NormalEstimation<PointT, NormalT> n;
-   pcl::PointCloud<NormalT>::Ptr normals(new pcl::PointCloud<NormalT>);
-   pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
+   pcl::search::KdTree<PointNormalT>::Ptr tree(new pcl::search::KdTree<PointNormalT>);
    tree->setInputCloud(cloud);
-   n.setInputCloud(cloud);
-   n.setSearchMethod(tree);
-   n.setKSearch(20);
-   n.compute(*normals);
 
-
-   // points + normals in kdtree
-   pcl::PointCloud<PointNormalT>::Ptr cloud_with_normals(new pcl::PointCloud<PointNormalT>);
-   pcl::concatenateFields(*cloud, *normals, *cloud_with_normals);
-   pcl::search::KdTree<PointNormalT>::Ptr tree2(new pcl::search::KdTree<PointNormalT>);
-   tree2->setInputCloud(cloud_with_normals);
-
-   pcl::io::savePLYFileBinary("cloud_with_normals.ply", *normals);
-
-   // visualize normals
-   pcl::visualization::PCLVisualizer viewer("PCL Viewer");
-   viewer.setBackgroundColor (0.0, 0.0, 0.5);
-   pcl::visualization::PointCloudColorHandlerRGBField<PointT> rgb(cloud);
-   viewer.addPointCloud<PointT> (cloud, rgb, "sample cloud");
-   viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
-   viewer.addPointCloudNormals<PointT, NormalT> (cloud, normals, 10, 0.05, "normals");
-   viewer.addCoordinateSystem (0.3);
-   viewer.initCameraParameters();
-
-   while (!viewer.wasStopped ())
-   {
-     viewer.spinOnce ();
-   }
-
-   // marchingcubes surface fit
-   std::cout << "-- marching cube" << std::endl;
    pcl::PolygonMesh::Ptr triangles(new pcl::PolygonMesh);
 
    pcl::MarchingCubesHoppe<PointNormalT> mc;
-   mc.setGridResolution(50.0, 50.0, 50.0);
+   mc.setGridResolution(70.0, 70.0, 70.0);
    //mc.setIsoLevel(0.0);
 
-   mc.setInputCloud(cloud_with_normals);
-   mc.setSearchMethod(tree2);
+   mc.setInputCloud(cloud);
+   mc.setSearchMethod(tree);
    mc.reconstruct(*triangles);
 
    return triangles;
@@ -102,8 +65,8 @@ int main(int argc, char** argv)
       return EXIT_FAILURE;
    }
    std::cout << "loading " << fname << std::endl;
-   pcl::PointCloud<PointT>::Ptr cloud_in(new pcl::PointCloud<PointT>);
-   pcl::io::loadPLYFile<PointT>(fname, *cloud_in);
+   pcl::PointCloud<PointNormalT>::Ptr cloud_in(new pcl::PointCloud<PointNormalT>);
+   pcl::io::loadPLYFile<PointNormalT>(fname, *cloud_in);
 
    pcl::PolygonMesh::Ptr triangles = marchingcubesReconstruction(cloud_in);
 
